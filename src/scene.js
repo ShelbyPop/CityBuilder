@@ -13,11 +13,13 @@ export function createScene() {
   renderer.setSize(gameWindow.offsetWidth, gameWindow.offsetHeight);
   gameWindow.appendChild(renderer.domElement);
 
-  let meshes = [];
+  let terrain = [];
+  let buildings = [];
 
   function initialize(city) {
     scene.clear();
-    meshes = [];
+    terrain = [];
+    buildings = [];
     for (let x = 0; x < city.size; x++) {
       let column = [];
       for  (let y = 0; y < city.size; y++) {
@@ -29,24 +31,35 @@ export function createScene() {
         box_mesh.position.set(x, -0.5, y); // top-down from y-axis, x-z graph (why 'y' in z-axis slot)
         scene.add(box_mesh); // Add mesh to scene
         column.push(box_mesh) 
-
-        // BUILDING Geometry
-        const tile = city.data[x][y];
-        if (tile.building === 'building') {
-          const building_geometry = new THREE.BoxGeometry(1,1,1);
-          const building_material = new THREE.MeshLambertMaterial({ color: 0x555555 }); // Lambert to avoid gloss 
-          const building_mesh = new THREE.Mesh(building_geometry, building_material);
-          building_mesh.position.set(x, 0.5, y); // top-down from y-axis, x-z graph (why 'y' in z-axis slot)
-          scene.add(building_mesh); // Add mesh to scene
-          column.push(building_mesh)
-        }
-         
       }
-      meshes.push(column); // push mesh to meshes
+      terrain.push(column); // push mesh to meshes
+      buildings.push([...Array(city.size)]); // 2dimensional grid of undef columns
     }
-
     initLights();
   }
+
+  function update(city) {
+    for (let x = 0; x < city.size; x++) {
+      for  (let y = 0; y < city.size; y++) {
+        // BUILDING Geometry
+        const tile = city.data[x][y];
+        // null check first
+        if (tile.building && tile.building.startsWith('building')) {
+          const height = tile.building.slice(-1); // last char is block-height
+          const building_geometry = new THREE.BoxGeometry(1,height,1);
+          const building_material = new THREE.MeshLambertMaterial({ color: 0xaaaaaa }); // Lambert to avoid gloss 
+          const building_mesh = new THREE.Mesh(building_geometry, building_material);
+          building_mesh.position.set(x, height/2, y); // top-down from y-axis, x-z graph (why 'y' in z-axis slot)
+          if (buildings[x][y]) {
+            scene.remove(buildings[x][y]);
+          }
+          scene.add(building_mesh); // Add mesh to scene
+          buildings[x][y] = building_mesh;
+        }      
+      }
+    }
+  }
+
 
   function initLights() {
     const lights = [
@@ -90,6 +103,7 @@ export function createScene() {
 
   return {
     initialize,
+    update,
     start,
     stop,
     onMouseDown,

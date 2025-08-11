@@ -8,9 +8,9 @@ export function createCamera(gameWindow) {
   const MIDDLE_MOUSE_BUTTON = 1;
   const RIGHT_MOUSE_BUTTON = 2; 
   
-  const MIN_CAMERA_ZOOM = 2; // camera radius 
-  const MAX_CAMERA_ZOOM = 10;
-  const MIN_CAMERA_ELEVATION = 30;
+  const MIN_CAMERA_ZOOM = 10; // camera radius 
+  const MAX_CAMERA_ZOOM = 30;
+  const MIN_CAMERA_ELEVATION = 10;
   const MAX_CAMERA_ELEVATION = 90;
   const ROTATION_SENS = 0.5;
   const PAN_SENS = -0.01;
@@ -19,9 +19,9 @@ export function createCamera(gameWindow) {
 
   const camera = new THREE.PerspectiveCamera(75, gameWindow.offsetWidth / gameWindow.offsetHeight, 0.1, 1000);
   let cameraOrigin = new THREE.Vector3(); // 0 vector init
-  let cameraRadius = 4;
-  let cameraElevation = 0;
-  let cameraAzimuth = 0; // twin angle to 'elevation' for camera (y-z angle)
+  let cameraRadius = (MIN_CAMERA_ZOOM + MAX_CAMERA_ZOOM) / 2;
+  let cameraElevation = 45;
+  let cameraAzimuth = 135; // twin angle to 'elevation' for camera (y-z angle)
   let isLeftMouseDown = false;
   let isRightMouseDown = false;
   let isMiddleMouseDown = false;

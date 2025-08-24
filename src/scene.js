@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { createCamera } from './camera_control.js';
+import { createAssetInstance } from './assets.js';
+
 
 export function createScene() {
   // Initialize scene
@@ -13,8 +15,14 @@ export function createScene() {
   renderer.setSize(gameWindow.offsetWidth, gameWindow.offsetHeight);
   gameWindow.appendChild(renderer.domElement);
 
+  const raycaster = new THREE.Raycaster();
+  const mouse = new THREE.Vector2();
+  let selectedObject = undefined;
+
   let terrain = [];
   let buildings = [];
+
+  let onObjectSelected = undefined;
 
   function initialize(city) {
     scene.clear();
@@ -23,14 +31,10 @@ export function createScene() {
     for (let x = 0; x < city.size; x++) {
       let column = [];
       for  (let y = 0; y < city.size; y++) {
-        // GRASS
-        // Load mesh @ x,y tile-coordinate
-        const box_geometry = new THREE.BoxGeometry(1,1,1);
-        const box_material = new THREE.MeshLambertMaterial({ color: 0x00cc00 }); // Lambert to avoid gloss 
-        const box_mesh = new THREE.Mesh(box_geometry, box_material);
-        box_mesh.position.set(x, -0.5, y); // top-down from y-axis, x-z graph (why 'y' in z-axis slot)
-        scene.add(box_mesh); // Add mesh to scene
-        column.push(box_mesh) 
+        const terrainID = city.data[x][y].terrainID;
+        const mesh = createAssetInstance(terrainID, x, y);
+        scene.add(mesh); // Add mesh to scene
+        column.push(mesh) 
       }
       terrain.push(column); // push mesh to meshes
       buildings.push([...Array(city.size)]); // 2dimensional grid of undef columns
@@ -42,20 +46,21 @@ export function createScene() {
     for (let x = 0; x < city.size; x++) {
       for  (let y = 0; y < city.size; y++) {
         // BUILDING Geometry
-        const tile = city.data[x][y];
-        // null check first
-        if (tile.building && tile.building.startsWith('building')) {
-          const height = tile.building.slice(-1); // last char is block-height
-          const building_geometry = new THREE.BoxGeometry(1,height,1);
-          const building_material = new THREE.MeshLambertMaterial({ color: 0xaaaaaa }); // Lambert to avoid gloss 
-          const building_mesh = new THREE.Mesh(building_geometry, building_material);
-          building_mesh.position.set(x, height/2, y); // top-down from y-axis, x-z graph (why 'y' in z-axis slot)
-          if (buildings[x][y]) {
-            scene.remove(buildings[x][y]);
-          }
-          scene.add(building_mesh); // Add mesh to scene
-          buildings[x][y] = building_mesh;
-        }      
+        const currBuildingID = buildings[x][y]?.userData.ID;
+        const newBuildingID = city.data[x][y].buildingID;
+
+        // if remove building, remove from scene
+        if (!newBuildingID && currBuildingID) {
+          scene.remove(buildings[x][y]);
+          buildings[x][y] = undefined;
+        }
+
+        // update mesh on data model change
+        if (newBuildingID !== currBuildingID) {
+          scene.remove(buildings[x][y])
+          buildings[x][y] = createAssetInstance(newBuildingID, x, y);
+          scene.add(buildings[x][y]);
+        }
       }
     }
   }
@@ -89,6 +94,22 @@ export function createScene() {
 
   function onMouseDown(event) {
     camera.onMouseDown(event);
+
+    mouse.x = (event.clientX / renderer.domElement.clientWidth) * 2 - 1; // normalize to [-1, 1]
+    mouse.y = -(event.clientY / renderer.domElement.clientHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera.camera);
+    let intersections = raycaster.intersectObjects(scene.children, false);
+    if (intersections.length > 0) {
+      if (selectedObject) selectedObject.material.emissive.setHex(0);
+      selectedObject = intersections[0].object;
+      selectedObject.material.emissive.setHex(0x555555);
+      console.log(selectedObject.userData);
+      
+      if (this.onObjectSelected) {
+        this.onObjectSelected(selectedObject);
+      }
+    }
+
   }
 
   function onMouseUp(event) {
@@ -99,9 +120,8 @@ export function createScene() {
     camera.onMouseMove(event);
   }
 
-  
-
   return {
+    onObjectSelected,
     initialize,
     update,
     start,

@@ -6,10 +6,17 @@ export function initGame() {
   const city = createCity(16); // 16x16 grid
 
   scene.initialize(city);
-  
-  document.addEventListener('mousedown', scene.onMouseDown, false);
-  document.addEventListener('mouseup', scene.onMouseUp, false);
-  document.addEventListener('mousemove', scene.onMouseMove, false);
+  scene.onObjectSelected = (selectedObject) => {
+    console.log(selectedObject);
+
+    let { x, y } = selectedObject.userData;
+
+    const tile = city.data[x][y];
+    console.log(tile);
+  }
+  document.addEventListener('mousedown', scene.onMouseDown.bind(scene), false);
+  document.addEventListener('mouseup', scene.onMouseUp.bind(scene), false);
+  document.addEventListener('mousemove', scene.onMouseMove.bind(scene), false);
   document.addEventListener('contextmenu', (event) => event.preventDefault(), false);
   
   const game = {
